@@ -6,7 +6,10 @@ void bar(){
 	foo();
 }
 
+void barr(){}
+
 int main(){
+	barr();
 	bar();
 	return 0;
 }

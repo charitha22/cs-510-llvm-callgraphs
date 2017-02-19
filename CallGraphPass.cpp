@@ -5,6 +5,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/IR/CallSite.h"
 
 using namespace llvm;
 
@@ -27,7 +28,7 @@ bool CallGraphPass::runOnModule(Module& m){
 	for(Module::iterator it =  m.begin(); it != m.end(); it++){
 		
 		Function& f = *it;
-		errs() << "Function : " << f.getName().str() << " == > ";
+		errs() << "Function : " << f.getName().str() << " == > \n" ;
 
 		//iterate over basic blocks
 		for(Function::iterator it1 = f.begin(); it1 != f.end(); it1++){
@@ -38,7 +39,18 @@ bool CallGraphPass::runOnModule(Module& m){
 
 				Instruction & inst = *it2;
 
-				inst.dump();
+				CallSite cs(&inst);
+
+				if(!cs.getInstruction()){
+					continue;
+				}
+				errs() << "Found a function call" << inst << "\n";
+
+				Value * called = cs.getCalledValue()->stripPointerCasts();
+
+				if(Function * f = dyn_cast<Function>(called)){
+					errs() << "Direct call to function : " << f->getName() << "\n";
+				}
 			}
 
 

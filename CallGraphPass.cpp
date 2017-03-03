@@ -28,7 +28,7 @@ bool CallGraphPass::runOnModule(Module& m){
 	for(Module::iterator it =  m.begin(); it != m.end(); it++){
 		
 		Function& f = *it;
-		errs() << "Function : " << f.getName().str() << " == > \n" ;
+		errs() << f.getName().str() << " : " ;
 
 		//iterate over basic blocks
 		for(Function::iterator it1 = f.begin(); it1 != f.end(); it1++){
@@ -44,24 +44,26 @@ bool CallGraphPass::runOnModule(Module& m){
 				if(!cs.getInstruction()){
 					continue;
 				}
-				errs() << "Found a function call" << inst << "\n";
+				//errs() << "Found a function call" << inst << "\n";
 
 				Value * called = cs.getCalledValue()->stripPointerCasts();
 
 				if(Function * f = dyn_cast<Function>(called)){
-					errs() << "Direct call to function : " << f->getName() << "\n";
+					errs()  << f->getName() << " ";
 				}
+
 			}
 
 
 		}	
+		errs() << "\n";
 	}
 	return false;
 }
 
 
 char CallGraphPass::ID = 0;
-static RegisterPass<CallGraphPass> X("callgraph", "Call Grpah Pass",
+static RegisterPass<CallGraphPass> X("callgraph", "Call Graph Pass",
 	false /* Only looks at CFG */,
 	false /* Analysis Pass */);
 

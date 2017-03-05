@@ -30,6 +30,7 @@ def main():
 
 
         opt_command = opt_path + " -load " +so_location + " -callgraph < " + sys.argv[i].split(".")[0] + ".bc > /dev/null"
+        print("Running "+opt_command)
 
         rc = os.system(opt_command)
 

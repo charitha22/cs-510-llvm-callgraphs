@@ -15,8 +15,8 @@ namespace {
 		static char ID;
 
 		// this map will store which variables/pointers are pointing to functions
-		std::map<Value*, Function*> pointersToFuncMap_;
-		std::map<Value*, Value*> valuesToPointersMap_;
+		std::map<Value*, Value*> storesMap_;
+		std::map<Value*, Value*> loadsMap_;
 	
 		CallGraphPass() : ModulePass(ID) {}
 
@@ -25,9 +25,35 @@ namespace {
 		void handleCallSites(Instruction& inst);
 
 		bool runOnModule(Module &m) override;
+
+		// debug
+		void dumpStoresMap();
+		void dumpLoadsMap();
 		
 	}; 
 } 
+
+void CallGraphPass::dumpStoresMap(){
+	errs() << "==== Store map ====\n";
+	for(std::map<Value*, Value*>::iterator it = storesMap_.begin(); it!=storesMap_.end(); it++){
+		errs() << "Value : ";
+		it->first->dump();
+		errs() << "points to : ";
+		it->second->dump();
+	}
+}
+
+void CallGraphPass::dumpLoadsMap(){
+	errs() << "==== Load map ==== \n";
+	for(std::map<Value*, Value*>::iterator it = loadsMap_.begin(); it!=loadsMap_.end(); it++){
+		errs() << "Value : ";
+		it->first->dump();
+		errs() << "points to : ";
+		it->second->dump();
+	}
+}
+
+
 
 void CallGraphPass::handleCallSites(Instruction& inst){
 
@@ -47,16 +73,68 @@ void CallGraphPass::handleCallSites(Instruction& inst){
 		else{
 
 			//check the value in valuesToPointersMap_
-			std::map<Value*, Value*>::iterator it = valuesToPointersMap_.find(called);
+			
 
-			if(it != valuesToPointersMap_.end()){
-				// now get the function this pointer points to
-				std::map<Value*, Function*>::iterator it2 = pointersToFuncMap_.find(it->second);
+			//errs() << "called value : ";
 
-				if(it2 != pointersToFuncMap_.end()){
-					errs()  << "calls function " << it2->second->getName() << " \n";
+			//called->dump();
+
+			//errs() << "called value points to : ";
+			//dumpLoadsMap();
+			//dumpStoresMap();
+
+			bool addrFound = false;
+
+			Value* curr = called;
+			Value* addr = 0;
+
+			// iterate in loadsMap
+			while(!addrFound){
+
+				// check if the current called value is in store
+				std::map<Value*, Value*>::iterator it = storesMap_.find(curr);
+
+				if(it!=storesMap_.end()){
+					addrFound = true;
+					addr = curr;
 				}
+				else{
+
+					//curr = &(loadsMap_.at(curr));
+					std::map<Value*, Value*>::iterator it1 = loadsMap_.find(curr);
+					if(it1!=loadsMap_.end()){
+						curr = it1->second;
+					}
+
+				}
+
 			}
+
+			// iterate in storesMap
+			bool funcFound = false;
+			while(!funcFound){
+				std::map<Value*, Value*>::iterator it = storesMap_.find(addr);
+
+				if(it!=storesMap_.end()){
+
+					Value* storedVal = it->second;
+
+					if(Function* f = dyn_cast<Function>(storedVal)){
+						errs() << "calls function : " << f->getName() << "\n";
+						funcFound = true;
+					}
+					else{
+						addr = storedVal;
+					}
+
+
+				}
+
+			}
+
+
+
+			
 
 		}
 	}
@@ -65,14 +143,24 @@ void CallGraphPass::handleCallSites(Instruction& inst){
 
 void CallGraphPass::handleStores(StoreInst* sinst){
 	Value* valOp = sinst->getValueOperand()->stripPointerCasts();
+	Value* pointOp = sinst->getPointerOperand()->stripPointerCasts();
+	
+	storesMap_.insert(std::pair<Value*, Value*>(pointOp, valOp)); 
+
 					
 	// check if this vlaue operand is a function
-	if(Function* f = dyn_cast<Function>(valOp)){
+	// if(Function* f = dyn_cast<Function>(valOp)){
 
-		Value* pointOp = sinst->getPointerOperand()->stripPointerCasts();
-		pointersToFuncMap_.insert(std::pair<Value*, Function*>(pointOp, f)); 
+	// 	Value* pointOp = sinst->getPointerOperand()->stripPointerCasts();
+	// 	pointersToFuncMap_.insert(std::pair<Value*, Function*>(pointOp, f)); 
 
-	}
+	// errs() << "adding store entry \n" ;
+	// pointOp->dump();
+	// errs() << " stores the value  ";
+	// valOp->dump();
+
+
+	// }
 				
 }
 
@@ -83,7 +171,14 @@ void CallGraphPass::handleLoads(LoadInst* linst){
 	// result of the load instruction
 	Value* loadVal = dyn_cast<Value>(linst);
 
-	valuesToPointersMap_.insert(std::pair<Value*, Value*>(loadVal, pointerOp));
+	loadsMap_.insert(std::pair<Value*, Value*>(loadVal, pointerOp));
+
+	// errs() << "adding load entry \n" ;
+	// loadVal->dump();
+	// errs() << " get loaded the value in ";
+	// pointerOp->dump();
+
+
 }
 
 bool CallGraphPass::runOnModule(Module& m){

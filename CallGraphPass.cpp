@@ -10,23 +10,52 @@
 using namespace llvm;
 
 namespace {
+	class ExtraFunc{
+	public:
+		Value* callValue_;
+		std::vector<Value*> funcsPointedTo_;
+		
+		ExtraFunc(Value* calledValue) {callValue_ = calledValue;}
+		void addValue(Value* val) {funcsPointedTo_.push_back(val);}
+		Value* getCallValue() {return callValue_;}
+		void dumpAllFuncs(std::vector<Function*>& output) {
+			for(std::vector<Value*>::iterator it = funcsPointedTo_.begin(); it != funcsPointedTo_.end();
+				it++){
+				
+				Function* f = dyn_cast<Function>(*it);
+				if(f){
+					//errs() << "[" << f->getName() << "]";
+					output.push_back(f);
+				}
+				
+
+			}
+		}
+
+	};
+
 	class CallGraphPass : public ModulePass {
 	public:
 		static char ID;
 
-		// this map will store which variables/pointers are pointing to functions
+		// this map will store which pointer are string which values
 		std::map<Value*, Value*> storesMap_;
+		// this map will store which values/pointers are loaded to which values 
 		std::map<Value*, Value*> loadsMap_;
+
+		// this map is used when a pointer variable is pointing to 
+		// multiple functions. eg. tc3.c
+		std::vector<ExtraFunc*> extraFuncMap_;
 	
 		CallGraphPass() : ModulePass(ID) {}
 
 		void handleStores(StoreInst* sinst);
 		void handleLoads(LoadInst* linst);
-		void handleCallSites(Instruction& inst);
+		void handleCallSites(Instruction& inst, std::vector<Function*>& output);
 
 		bool runOnModule(Module &m) override;
 
-		// debug
+		// for debugging
 		void dumpStoresMap();
 		void dumpLoadsMap();
 		
@@ -55,7 +84,7 @@ void CallGraphPass::dumpLoadsMap(){
 
 
 
-void CallGraphPass::handleCallSites(Instruction& inst){
+void CallGraphPass::handleCallSites(Instruction& inst,std::vector<Function*>& output){
 
 	// manage call sites
 	CallSite cs(&inst);
@@ -66,22 +95,13 @@ void CallGraphPass::handleCallSites(Instruction& inst){
 		if(Function * f = dyn_cast<Function>(called) ){
 			// ignoring intrinsic function
 			if(!f->isIntrinsic()){
-				errs()  << "calls function " << f->getName() << " \n";
+				//errs()  << "[" << f->getName() << "]";
+				output.push_back(f);
 			}
 			
 		}
 		else{
 
-			//check the value in valuesToPointersMap_
-			
-
-			//errs() << "called value : ";
-
-			//called->dump();
-
-			//errs() << "called value points to : ";
-			//dumpLoadsMap();
-			//dumpStoresMap();
 
 			bool addrFound = false;
 
@@ -120,7 +140,27 @@ void CallGraphPass::handleCallSites(Instruction& inst){
 					Value* storedVal = it->second;
 
 					if(Function* f = dyn_cast<Function>(storedVal)){
-						errs() << "calls function : " << f->getName() << "\n";
+						
+						// NOTE tc3.c : here we need to find if the addr is pointing to multiple
+						// functions in possible control flows. So check in extraFuncMap_
+						bool mulFuncsFound = false;
+						
+						for(std::vector<ExtraFunc*>::iterator it = extraFuncMap_.begin(); it!=extraFuncMap_.end()
+								;it++){
+							if((*it)->getCallValue()==addr){
+								mulFuncsFound = true;
+								(*it)->dumpAllFuncs(output);
+								break;
+
+							}
+
+						}
+
+						if(!mulFuncsFound){
+							//errs() << "[" << f->getName() << "]";
+							output.push_back(f);
+						}
+
 						funcFound = true;
 					}
 					else{
@@ -144,23 +184,24 @@ void CallGraphPass::handleCallSites(Instruction& inst){
 void CallGraphPass::handleStores(StoreInst* sinst){
 	Value* valOp = sinst->getValueOperand()->stripPointerCasts();
 	Value* pointOp = sinst->getPointerOperand()->stripPointerCasts();
+
+	// tc3.c : see if this pointOp is already storing a value
+	// In this case we assume valueOp is always a function and we 
+	// store the additional functions in a seprate list to use later
+	std::map<Value*, Value*>::iterator it = storesMap_.find(pointOp);
+	if(it!=storesMap_.end()){
+		//errs() << "This pointer is already assigned.\n";
+		ExtraFunc* functions = new ExtraFunc(pointOp);
+		functions->addValue(valOp);
+		functions->addValue(it->second);
+		extraFuncMap_.push_back(functions);
+		
+		
+	}
+	else{
+		storesMap_.insert(std::pair<Value*, Value*>(pointOp, valOp)); 
+	}
 	
-	storesMap_.insert(std::pair<Value*, Value*>(pointOp, valOp)); 
-
-					
-	// check if this vlaue operand is a function
-	// if(Function* f = dyn_cast<Function>(valOp)){
-
-	// 	Value* pointOp = sinst->getPointerOperand()->stripPointerCasts();
-	// 	pointersToFuncMap_.insert(std::pair<Value*, Function*>(pointOp, f)); 
-
-	// errs() << "adding store entry \n" ;
-	// pointOp->dump();
-	// errs() << " stores the value  ";
-	// valOp->dump();
-
-
-	// }
 				
 }
 
@@ -173,16 +214,10 @@ void CallGraphPass::handleLoads(LoadInst* linst){
 
 	loadsMap_.insert(std::pair<Value*, Value*>(loadVal, pointerOp));
 
-	// errs() << "adding load entry \n" ;
-	// loadVal->dump();
-	// errs() << " get loaded the value in ";
-	// pointerOp->dump();
-
 
 }
 
 bool CallGraphPass::runOnModule(Module& m){
-	//errs() << "Call graph for module : "<< m.getName().str().c_str() << "\n";
 	
 	// iterate over functions
 	for(Module::iterator it =  m.begin(); it != m.end(); it++){
@@ -193,7 +228,10 @@ bool CallGraphPass::runOnModule(Module& m){
 			continue;
 		}
 
-		errs() << f.getName().str() << " : \n" ;
+		errs() << "[" << f.getName().str() << "] : " ;
+
+		// all the functions called by this function is stored in this list
+		std::vector<Function*> outputFuncs;
 
 		//iterate over basic blocks
 		for(Function::iterator it1 = f.begin(); it1 != f.end(); it1++){
@@ -214,14 +252,27 @@ bool CallGraphPass::runOnModule(Module& m){
 				// and the value it loads to a map
 				else if(LoadInst* linst = dyn_cast<LoadInst>(&inst)){
 					handleLoads(linst);
-				}
+				}	
 
 				//manage callsites
-				handleCallSites(inst);
+				handleCallSites(inst, outputFuncs);
 			}
 
 
 		}	
+
+		// print all the functions called by this function
+		int commaCount = outputFuncs.size()-1; //formatting stuff 
+		for(std::vector<Function*>::iterator it3 = outputFuncs.begin(); it3!=outputFuncs.end();it3++){
+			Function * f = *it3;
+			errs() << "[" << f->getName() << "]" ;
+			if(commaCount>0){
+				errs() << "," ;
+			}
+			commaCount--;
+		}
+
+
 		errs() << "\n";
 	}
 	return false;

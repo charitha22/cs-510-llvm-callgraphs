@@ -59,7 +59,7 @@ For this you can use 2 methods
 
 Note : replace tc1.c with the c file you want
 
-Generating Grphical Representation of Call Graph
+Generating Graphical Representation of Call Graph
 ================================================
 
 This is done using Graphviz visualization library

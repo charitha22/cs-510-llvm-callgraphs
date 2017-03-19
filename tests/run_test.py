@@ -13,6 +13,7 @@ def main():
     for i in range(1, len(sys.argv)):
         #print(sys.argv[i])
         clang_command = clang_path + " -O0  -g -c -emit-llvm " +sys.argv[i]
+        print("Running "+clang_command)
         rc = os.system(clang_command)
 
         if(rc!=0):

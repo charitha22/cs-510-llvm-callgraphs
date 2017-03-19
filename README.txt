@@ -18,7 +18,7 @@ Assuming you have downloaded and built LLVM.
 
 1. cd <LLVM SRC directory>/lib/Transforms/
 2. mkdir cs-510-llvm-callgraphs
-3. Copy the code to <LLVM directory>/lib/Transforms/cs-510-llvm-callgraphs
+3. Copy the code files to <LLVM SRC directory>/lib/Transforms/cs-510-llvm-callgraphs
 4. cd <LLVM SRC directory>/lib/Transforms/
 5. open CMakeLists.txt and add the following line
 
@@ -35,19 +35,19 @@ For this you can use 2 methods
 
 [1]. using manual method
 
-1. cd <LLVM directory>/lib/Transforms/cs-510-llvm-callgraphs/tests
+1. cd <LLVM SRC directory>/lib/Transforms/cs-510-llvm-callgraphs/tests
 2. Run  clang using,
-    <LLVM BUILD directory>/bin/clang-4.0 -O0  -g -c -emit-llvm tc1.c
+    <LLVM BUILD directory>/bin/clang -O0  -g -c -emit-llvm tc1.c
 3. run the pass using,
     <LLVM BUILD directory>/bin/opt -load <LLVM BUILD directory>/lib/LLVMCallGraph.so -callgraph < tc1.bc > /dev/null
 
 
 [2]. Using python script
 
-1. cd <LLVM directory>/lib/Transforms/cs-510-llvm-callgraphs/tests
+1. cd <LLVM SRC directory>/lib/Transforms/cs-510-llvm-callgraphs/tests
 2. change the follwing lines in run_test.py
 
-    clang_path = "<LLVM BUILD directory>/bin/clang-4.0"
+    clang_path = "<LLVM BUILD directory>/bin/clang"
     opt_path = "<LLVM BUILD directory>/bin/opt"
     dis_location = "<LLVM BUILD directory>/bin/llvm-dis"
     so_location = "<LLVM BUILD directory>/lib/LLVMCallGraph.so"
@@ -74,7 +74,7 @@ This is done using Graphviz visualization library
     dot - graphviz version 2.38.0 (20140413.2041)
     .....
 
-3. cd <LLVM directory>/lib/Transforms/cs-510-llvm-callgraphs/tests
+3. cd <LLVM SRC directory>/lib/Transforms/cs-510-llvm-callgraphs/tests
 4. python3 gen_graph.py tc1.c
 
 This should generate a .png file with the visual representation of call graph

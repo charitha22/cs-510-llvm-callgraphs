@@ -1,9 +1,9 @@
-Environemnt
+Environment
 ============
 
 I used the following environment for buidling LLVM and running my analysis pass.
 
-Architecture:          x86_64
+Architecture:          x86_64 
 CPU op-mode(s):        32-bit, 64-bit
 Model name:            Intel(R) Core(TM) i7-6700HQ CPU @ 2.60GHz
 
@@ -19,7 +19,9 @@ How to build the pass?
 3. Copy the code to <LLVM directory>/lib/Transforms/cs-510-llvm-callgraphs
 4. cd <LLVM SRC directory>/lib/Transforms/
 5. open CMakeLists.txt and add the following line
+
     add_subdirectory(cs-510-llvm-callgraphs)
+
 6. cd <LLVM BUILD directory>/lib/Transforms
 7. make
 

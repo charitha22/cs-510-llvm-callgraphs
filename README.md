@@ -14,6 +14,8 @@ Date : 02 Sep 2016
 
 How to build the pass?
 =======================
+Assuming you have downloaded and built LLVM.
+
 1. cd <LLVM SRC directory>/lib/Transforms/
 2. mkdir cs-510-llvm-callgraphs
 3. Copy the code to <LLVM directory>/lib/Transforms/cs-510-llvm-callgraphs

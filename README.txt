@@ -59,6 +59,29 @@ For this you can use 2 methods
 
 Note : replace tc1.c with the c file you want
 
+Generating Grphical Representation of Call Graph
+================================================
+
+This is done using Graphviz visualization library
+
+1. Install graphviz using,
+    
+    sudo apt-get install graphviz
+
+2. To verify the installation do this,
+    
+    $ dot -v
+    dot - graphviz version 2.38.0 (20140413.2041)
+    .....
+
+3. cd <LLVM directory>/lib/Transforms/cs-510-llvm-callgraphs/tests
+4. python3 gen_graph.py tc1.c
+
+This should generate a .png file with the visual representation of call graph
+
+NOTE : This is not fully tested. sorry for the bugs if any!
+
+
 GitHub Link for the Project
 ===========================
 
